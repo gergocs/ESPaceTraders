@@ -223,7 +223,8 @@ void MenuHandler::select(const String &token) {
             data.emplace_back("hq:" + this->jsonStorage["data"]["headquarters"].as<String>());
             data.emplace_back(this->jsonStorage["data"]["isRecruiting"].as<bool>() ? "recruiting" : "not recruiting");
 
-            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false, this->jsonStorage["data"]["description"].as<String>());
+            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false,
+                                this->jsonStorage["data"]["description"].as<String>());
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -243,24 +244,25 @@ void MenuHandler::select(const String &token) {
 
             std::vector<String> data = {};
 
-            if (!this->currentMenu->getMenuItems()[0].startsWith("deadline")) {
-                data.emplace_back("deadline: " + this->jsonStorage["data"]["terms"]["deadline"].as<String>());
-                data.emplace_back(
-                        "1st payment: " + this->jsonStorage["data"]["terms"]["payment"]["onAccepted"].as<String>());
-                data.emplace_back(
-                        "2nd payment: " + this->jsonStorage["data"]["terms"]["payment"]["onFulfilled"].as<String>());
-            } else if (!this->currentMenu->getMenuItems()[0].startsWith("deadline")) {
+            data.emplace_back("deadline: " + this->jsonStorage["data"]["terms"]["deadline"].as<String>());
+            data.emplace_back(
+                    "1st payment: " + this->jsonStorage["data"]["terms"]["payment"]["onAccepted"].as<String>());
+            data.emplace_back(
+                    "2nd payment: " + this->jsonStorage["data"]["terms"]["payment"]["onFulfilled"].as<String>());
+            data.emplace_back("dst: " +
+                              this->jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()[0]["destinationSymbol"].as<String>()); // TODO maybe change this
 
-            } else {
-                data.emplace_back(this->jsonStorage["data"]["id"].as<String>().substring(0, 18) + "...");
-                data.emplace_back(this->jsonStorage["data"]["factionSymbol"].as<String>());
-                data.emplace_back(this->jsonStorage["data"]["type"].as<String>());
-                data.emplace_back(this->jsonStorage["data"]["accepted"].as<bool>() ? "accepted" : "not accepted");
-                data.emplace_back(this->jsonStorage["data"]["fulfilled"].as<bool>() ? "fulfilled" : "not fulfilled");
-                data.emplace_back(this->jsonStorage["data"]["deadlineToAccept"].as<String>());
+            String items;
+
+            for (JsonVariant item: this->jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()) { // TODO order by destination
+                if (uint32_t fulfilled = item["unitsFulfilled"].as<uint32_t>(), required = item["unitsRequired"].as<uint32_t>();
+                        fulfilled < required) {
+                    items += item["tradeSymbol"].as<String>() + " " + String(required - fulfilled) +
+                             "\n"; // TODO number float to right
+                }
             }
 
-            auto tmp = new Menu(data, Menu::ContractMenu, this->currentMenu, false);
+            auto tmp = new Menu(data, Menu::ContractSubMenu, this->currentMenu, false, items);
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -268,15 +270,20 @@ void MenuHandler::select(const String &token) {
             break;
         }
         case Menu::ContractSubMenu: {
-            std::string symbol = this->idStorage[this->position];
-
-            this->jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/contracts/" + symbol,
-                                                token.c_str(), {{"contractId", symbol}});
+            if (this->currentMenu->getParent()->getName() != Menu::ContractMenu) {
+                break;
+            }
 
             ArduinoJson::serializeJson(this->jsonStorage, Serial);
 
             std::vector<String> data = {};
 
+            data.emplace_back(this->jsonStorage["data"]["id"].as<String>().substring(0, 18) + "...");
+            data.emplace_back(this->jsonStorage["data"]["factionSymbol"].as<String>());
+            data.emplace_back(this->jsonStorage["data"]["type"].as<String>());
+            data.emplace_back(this->jsonStorage["data"]["accepted"].as<bool>() ? "accepted" : "not accepted");
+            data.emplace_back(this->jsonStorage["data"]["fulfilled"].as<bool>() ? "fulfilled" : "not fulfilled");
+            data.emplace_back("deadLine:" + this->jsonStorage["data"]["deadlineToAccept"].as<String>());
 
             auto tmp = new Menu(data, Menu::ContractSubMenu, this->currentMenu, false);
 
