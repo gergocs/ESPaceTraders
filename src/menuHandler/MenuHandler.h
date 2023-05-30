@@ -20,7 +20,17 @@ public:
     void renderMenu();
 
     void forWard() {
-        if (this->needStar) {
+        if (this->extraInfoCounter != 0) {
+            if (this->extraInfoCounter <= (this->currentMenu->getExtraInfo().length() - (7 * 21)) / 21) {
+                this->extraInfoCounter++;
+            }
+
+            this->renderSpecial(false);
+
+            return;
+        }
+
+        if (this->currentMenu->isNeedStar()) {
             this->displayData[position][1] = ' ';
         } else {
             return;
@@ -32,13 +42,25 @@ public:
             this->position = 0;
         }
 
-        if (this->needStar) {
+        if (this->currentMenu->isNeedStar()) {
             this->displayData[position][1] = '*';
         }
+
+        this->renderMenu();
     }
 
     void backWard() {
-        if (this->needStar) {
+        if (this->extraInfoCounter != 0) {
+            if (this->extraInfoCounter > 1) {
+                this->extraInfoCounter--;
+            }
+
+            this->renderSpecial(false);
+
+            return;
+        }
+
+        if (this->currentMenu->isNeedStar()) {
             this->displayData[position][1] = ' ';
         } else {
             return;
@@ -59,14 +81,18 @@ public:
             this->position--;
         }
 
-        if (this->needStar) {
+        if (this->currentMenu->isNeedStar()) {
             this->displayData[position][1] = '*';
         }
+
+        this->renderMenu();
     }
+
+    void renderSpecial(bool first = true);
 
     void prevMenu();
 
-    void setDisplayData(std::vector<String> &data, bool star = true);
+    void setDisplayData(std::vector<String> &data);
 
     void setDisplayDataMainMenu();
 
@@ -75,13 +101,14 @@ public:
 private:
     ArduinoJson::DynamicJsonDocument jsonStorage;
     std::vector<String> displayData;
+    std::vector<std::string> idStorage;
     Menu *mainMenu;
     Menu *currentMenu;
     Adafruit_SH1106 display;
     uint16_t position;
     uint32_t pageCounter;
     uint32_t maxPage;
-    bool needStar;
+    uint8_t extraInfoCounter = 0;
 };
 
 

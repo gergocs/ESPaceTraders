@@ -16,9 +16,11 @@ public:
         MainMenu,
         AgentMenu,
         FactionMenu,
-        FleetMenu
+        FleetMenu,
+        ContractMenu,
+        ContractSubMenu,
     };
-    explicit Menu(const std::vector<String> &menuItems, Name name = MainMenu, Menu *parent = nullptr);
+    explicit Menu(const std::vector<String> &menuItems, Name name = MainMenu, Menu *parent = nullptr, bool needStar = true, String extraInfo = String());
 
     Menu *getParent() const;
 
@@ -34,13 +36,19 @@ public:
 
     Name getName() const;
 
+    bool isNeedStar() const;
+
+    const String &getExtraInfo() const;
+
     virtual ~Menu();
 
 private:
     Name name = MainMenu;
     Menu *parent = nullptr;
+    String extraInfo;
     std::vector<String> menuItems;
     std::vector<Menu *> childs;
+    bool needStar;
 };
 
 

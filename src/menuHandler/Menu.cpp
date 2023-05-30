@@ -4,7 +4,10 @@
 
 #include "Menu.h"
 
-Menu::Menu(const std::vector<String> &menuItems, Name name, Menu *parent) : parent(parent), menuItems(menuItems), name(name) {}
+#include <utility>
+
+Menu::Menu(const std::vector<String> &menuItems, Name name, Menu *parent, bool needStar, String extraInfo) : parent(parent), menuItems(menuItems), name(name), needStar(needStar),
+                                                                                                             extraInfo(std::move(extraInfo)) {}
 
 Menu *Menu::getParent() const {
     return parent;
@@ -39,4 +42,12 @@ void Menu::clearItems() {
 
 Menu::Name Menu::getName() const {
     return name;
+}
+
+bool Menu::isNeedStar() const {
+    return needStar;
+}
+
+const String &Menu::getExtraInfo() const {
+    return extraInfo;
 }

@@ -11,6 +11,7 @@
 #define BACKWARD_BTN 19
 #define SELECT_BTN 5
 #define BACK_BTN 18
+#define SPECIAL_BTN 16
 
 Adafruit_SH1106 display(SDA, SCL);
 MenuHandler *menuHandler;
@@ -22,6 +23,7 @@ void setup() {
     pinMode(BACKWARD_BTN, INPUT_PULLUP);
     pinMode(SELECT_BTN, INPUT_PULLUP);
     pinMode(BACK_BTN, INPUT_PULLUP);
+    pinMode(SPECIAL_BTN, INPUT_PULLUP);
 
     Serial.begin(9600);
 
@@ -53,19 +55,17 @@ void setup() {
 void loop() {
     if (digitalRead(FORWARD_BTN) == LOW) {
         menuHandler->forWard();
-        menuHandler->renderMenu();
         delay(100);
     } else if (digitalRead(BACKWARD_BTN) == LOW) {
         menuHandler->backWard();
-        menuHandler->renderMenu();
         delay(100);
     } else if (digitalRead(SELECT_BTN) == LOW) {
         menuHandler->select(agent->getToken());
-        menuHandler->renderMenu();
         delay(100);
     } else if (digitalRead(BACK_BTN) == LOW) {
         menuHandler->prevMenu();
-        menuHandler->renderMenu();
         delay(100);
+    } else if (digitalRead(SPECIAL_BTN) == LOW) {
+        menuHandler->renderSpecial();
     }
 }
