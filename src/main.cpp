@@ -30,8 +30,6 @@ void setup() {
     ArduinoJson::DynamicJsonDocument jsonData(1024);
     RESTClient::init("big chunky boy", "");
 
-    auto data = RESTClient::Get("https://api.spacetraders.io/v2", "");
-
     menuHandler = new MenuHandler(display);
 
     jsonData["faction"] = "COSMIC";
@@ -40,8 +38,6 @@ void setup() {
 
     jsonData = RESTClient::Post("https://api.spacetraders.io/v2/register", "", jsonData)["data"];
 
-    Serial.println(ArduinoJson::serializeJson(jsonData, Serial));
-
     if (jsonData["token"].isNull()) {
         agent = new Agent("");
     } else {
@@ -49,7 +45,6 @@ void setup() {
     }
 
     menuHandler->setDisplayDataMainMenu();
-    menuHandler->renderMenu();
 }
 
 void loop() {

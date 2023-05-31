@@ -3,7 +3,7 @@
 //
 
 #include "MenuHandler.h"
-#include "RESTClient/RESTClient.h"
+#include "DAO/DAO.h"
 
 __attribute__((unused)) MenuHandler::MenuHandler(int8_t sda, int8_t sdl) : display(Adafruit_SH1106(sda, sdl)),
                                                                            position(0),
@@ -49,8 +49,7 @@ void MenuHandler::renderMenu() {
     this->display.clearDisplay();
     this->display.setCursor(0, 0);
 
-    for (uint16_t i = this->position <= 8 ? 0 : this->position;
-         i < std::min(uint32_t(this->position + 8), this->displayData.size()); ++i) {
+    for (uint16_t i = this->position <= 8 ? 0 : this->position; i < std::min(uint32_t(this->position + 8), this->displayData.size()); ++i) {
         this->display.println(this->displayData[i]);
     }
 
@@ -65,6 +64,7 @@ void MenuHandler::setDisplayData(std::vector<String> &data) {
 void MenuHandler::setDisplayDataMainMenu() {
     this->setDisplayData(const_cast<std::vector<String> &>(this->mainMenu->getMenuItems()));
     this->currentMenu = this->mainMenu;
+    this->renderMenu();
 }
 
 void MenuHandler::prevMenu() {
@@ -87,17 +87,7 @@ void MenuHandler::select(const String &token) {
         case Menu::MainMenu: {
             switch (this->position) {
                 case 0: { // Agent data
-                    this->jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/agent",
-                                                        token.c_str())["data"];
-
-                    std::vector<String> data = {};
-
-                    data.push_back("id:" + this->jsonStorage["accountId"].as<String>());
-                    data.push_back("name:" + this->jsonStorage["symbol"].as<String>());
-                    data.push_back("hq:" + this->jsonStorage["headquarters"].as<String>());
-                    data.push_back("credits:" + this->jsonStorage["credits"].as<String>());
-
-                    auto tmp = new Menu(data, Menu::AgentMenu, this->currentMenu, false);
+                    auto tmp = new Menu(DAO::getAgentInfo(this->jsonStorage, token), Menu::AgentMenu, this->currentMenu, false);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -105,42 +95,7 @@ void MenuHandler::select(const String &token) {
                     break;
                 }
                 case 1: { // Factions
-                    this->jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/factions",
-                                                        token.c_str(), {{"limit", "7"},
-                                                                        {"page",  std::to_string(pageCounter)}});
-
-                    std::vector<String> data = {};
-                    uint32_t currentPage = 1;
-                    uint8_t counter = 0;
-
-                    if (this->jsonStorage["meta"].isNull()) {
-                        this->maxPage = 1;
-                    } else {
-                        this->maxPage = this->jsonStorage["meta"]["total"].as<int>();
-                        currentPage = this->jsonStorage["meta"]["page"].as<int>();
-                    }
-
-                    for (JsonVariant item: this->jsonStorage["data"].as<ArduinoJson::JsonArray>()) {
-                        if (counter == 0) {
-                            data.push_back("[*]" + item["symbol"].as<String>());
-                        } else {
-                            data.push_back("[ ]" + item["symbol"].as<String>());
-                        }
-
-                        counter++;
-
-                        if (counter >= 7) {
-                            break;
-                        }
-                    }
-
-                    for (; counter < 7; ++counter) {
-                        data.emplace_back();
-                    }
-
-                    data.emplace_back((std::to_string(currentPage) + "/" + std::to_string(this->maxPage)).c_str());
-
-                    auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu);
+                    auto tmp = new Menu(DAO::getFactions(this->jsonStorage, token, this->maxPage, this->pageCounter), Menu::FactionMenu, this->currentMenu);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -151,45 +106,7 @@ void MenuHandler::select(const String &token) {
                     break;
                 }
                 case 3: { // contracts
-                    this->jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/contracts",
-                                                        token.c_str(), {{"limit", "7"},
-                                                                        {"page",  std::to_string(pageCounter)}});
-
-                    std::vector<String> data = {};
-                    this->idStorage.clear();
-                    uint32_t currentPage = 1;
-                    uint8_t counter = 0;
-
-                    if (this->jsonStorage["meta"].isNull()) {
-                        this->maxPage = 1;
-                    } else {
-                        this->maxPage = this->jsonStorage["meta"]["total"].as<int>();
-                        currentPage = this->jsonStorage["meta"]["page"].as<int>();
-                    }
-
-                    for (JsonVariant item: this->jsonStorage["data"].as<ArduinoJson::JsonArray>()) {
-                        if (counter == 0) {
-                            data.push_back("[*]" + item["id"].as<String>().substring(0, 15) + "...");
-                        } else {
-                            data.push_back("[ ]" + item["id"].as<String>().substring(0, 15) + "...");
-                        }
-
-                        this->idStorage.push_back(item["id"].as<std::string>());
-
-                        counter++;
-
-                        if (counter >= 7) {
-                            break;
-                        }
-                    }
-
-                    for (; counter < 7; ++counter) {
-                        data.emplace_back();
-                    }
-
-                    data.emplace_back((std::to_string(currentPage) + "/" + std::to_string(this->maxPage)).c_str());
-
-                    auto tmp = new Menu(data, Menu::ContractMenu, this->currentMenu);
+                    auto tmp = new Menu(DAO::getContracts(this->jsonStorage, token, this->maxPage, this->pageCounter, this->idStorage), Menu::ContractMenu, this->currentMenu);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -207,24 +124,13 @@ void MenuHandler::select(const String &token) {
             break;
         }
         case Menu::FactionMenu: {
-            String symbol = this->currentMenu->getMenuItems()[this->position].substring(3);
+            auto data = DAO::getFaction(this->jsonStorage, token, this->currentMenu->getMenuItems()[this->position].substring(3));
 
-            this->jsonStorage = RESTClient::Get(("https://api.spacetraders.io/v2/factions/" + symbol).c_str(),
-                                                token.c_str(), {{"factionSymbol", symbol.c_str()}});
-
-            std::vector<String> data = {};
-
-            if (this->jsonStorage["data"]["name"].isNull()) {
+            if (data.empty()) [[unlikely]] {
                 break;
             }
 
-            data.emplace_back("name:" + this->jsonStorage["data"]["name"].as<String>());
-            data.emplace_back("symbol:" + this->jsonStorage["data"]["symbol"].as<String>());
-            data.emplace_back("hq:" + this->jsonStorage["data"]["headquarters"].as<String>());
-            data.emplace_back(this->jsonStorage["data"]["isRecruiting"].as<bool>() ? "recruiting" : "not recruiting");
-
-            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false,
-                                this->jsonStorage["data"]["description"].as<String>());
+            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false, this->jsonStorage["data"]["description"].as<String>());
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -235,34 +141,9 @@ void MenuHandler::select(const String &token) {
             break;
         }
         case Menu::ContractMenu: {
-            std::string symbol = this->idStorage[this->position];
-
-            this->jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/contracts/" + symbol,
-                                                token.c_str(), {{"contractId", symbol}});
-
-            ArduinoJson::serializeJson(this->jsonStorage, Serial);
-
-            std::vector<String> data = {};
-
-            data.emplace_back("deadline: " + this->jsonStorage["data"]["terms"]["deadline"].as<String>());
-            data.emplace_back(
-                    "1st payment: " + this->jsonStorage["data"]["terms"]["payment"]["onAccepted"].as<String>());
-            data.emplace_back(
-                    "2nd payment: " + this->jsonStorage["data"]["terms"]["payment"]["onFulfilled"].as<String>());
-            data.emplace_back("dst: " +
-                              this->jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()[0]["destinationSymbol"].as<String>()); // TODO maybe change this
-
             String items;
 
-            for (JsonVariant item: this->jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()) { // TODO order by destination
-                if (uint32_t fulfilled = item["unitsFulfilled"].as<uint32_t>(), required = item["unitsRequired"].as<uint32_t>();
-                        fulfilled < required) {
-                    items += item["tradeSymbol"].as<String>() + " " + String(required - fulfilled) +
-                             "\n"; // TODO number float to right
-                }
-            }
-
-            auto tmp = new Menu(data, Menu::ContractSubMenu, this->currentMenu, false, items);
+            auto tmp = new Menu(DAO::getContract(this->jsonStorage, token, this->idStorage[this->position], items), Menu::ContractSubMenu, this->currentMenu, false, items);
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -274,18 +155,7 @@ void MenuHandler::select(const String &token) {
                 break;
             }
 
-            ArduinoJson::serializeJson(this->jsonStorage, Serial);
-
-            std::vector<String> data = {};
-
-            data.emplace_back(this->jsonStorage["data"]["id"].as<String>().substring(0, 18) + "...");
-            data.emplace_back(this->jsonStorage["data"]["factionSymbol"].as<String>());
-            data.emplace_back(this->jsonStorage["data"]["type"].as<String>());
-            data.emplace_back(this->jsonStorage["data"]["accepted"].as<bool>() ? "accepted" : "not accepted");
-            data.emplace_back(this->jsonStorage["data"]["fulfilled"].as<bool>() ? "fulfilled" : "not fulfilled");
-            data.emplace_back("deadLine:" + this->jsonStorage["data"]["deadlineToAccept"].as<String>());
-
-            auto tmp = new Menu(data, Menu::ContractSubMenu, this->currentMenu, false);
+            auto tmp = new Menu(DAO::getContractSubMenu(this->jsonStorage), Menu::ContractSubMenu, this->currentMenu, false);
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -314,8 +184,7 @@ void MenuHandler::renderSpecial(bool first) {
     this->display.clearDisplay();
     this->display.setCursor(0, 0);
 
-    this->display.println(this->currentMenu->getExtraInfo().substring((this->extraInfoCounter - 1) * 21, std::min(
-            static_cast<unsigned int>(this->extraInfoCounter * 21 * 7), this->currentMenu->getExtraInfo().length())));
+    this->display.println(this->currentMenu->getExtraInfo().substring((this->extraInfoCounter - 1) * 21, std::min(static_cast<unsigned int>(this->extraInfoCounter * 21 * 7), this->currentMenu->getExtraInfo().length())));
 
     this->display.display();
 }
