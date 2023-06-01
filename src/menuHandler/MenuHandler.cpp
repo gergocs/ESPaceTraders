@@ -3,6 +3,7 @@
 //
 
 #include "MenuHandler.h"
+#include "utils/JSONEnum.h"
 
 #include <utility>
 
@@ -69,9 +70,8 @@ void MenuHandler::forWard() {
     }
 
     if (this->currentMenu->getName() == Menu::ContractSubMenu) {
-        DAO::fulfillContract(this->jsonStorage, this->token, this->jsonStorage["data"]["id"].as<std::string>());
+        DAO::fulfillContract(this->jsonStorage, this->token, this->jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::ID)].as<std::string>());
 
-        this->prevMenu();
         this->prevMenu();
 
         return;
@@ -209,7 +209,7 @@ void MenuHandler::select() {
                 break;
             }
 
-            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false, this->jsonStorage["data"]["description"].as<String>());
+            auto tmp = new Menu(data, Menu::FactionMenu, this->currentMenu, false, this->jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::DESCRIPTION)].as<String>());
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -256,7 +256,7 @@ void MenuHandler::renderSpecial(bool first) {
         if (DAO::acceptContract(this->jsonStorage, this->token, this->idStorage[this->position])) {
             this->currentMenu->setExtraInfo("Contract accepted");
         } else {
-            this->currentMenu->setExtraInfo(this->jsonStorage["error"]["message"].as<String>());
+            this->currentMenu->setExtraInfo(this->jsonStorage[getEnumAsString(JSONEnum::ERROR)][getEnumAsString(JSONEnum::MESSAGE)].as<String>());
         }
     }
 

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <vector>
+#include "utils/JSONEnum.h"
 #include "RESTClient/RESTClient.h"
 #include "game/Agent.h"
 #include "menuHandler/MenuHandler.h"
@@ -30,16 +31,16 @@ void setup() {
     ArduinoJson::DynamicJsonDocument jsonData(1024);
     RESTClient::init("big chunky boy", "");
 
-    jsonData["faction"] = "COSMIC";
-    jsonData["symbol"] = "alma6";
-    jsonData["email"] = "alma6@alma6.com";
+    jsonData[getEnumAsString(JSONEnum::FACTION)] = "COSMIC";
+    jsonData[getEnumAsString(JSONEnum::SYMBOL)] = "alma6";
+    jsonData[getEnumAsString(JSONEnum::EMAIL)] = "alma6@alma6.com";
 
-    jsonData = RESTClient::Post("https://api.spacetraders.io/v2/register", "", jsonData)["data"];
+    jsonData = RESTClient::Post("https://api.spacetraders.io/v2/register", "", jsonData)[getEnumAsString(JSONEnum::DATA)];
 
-    if (jsonData["token"].isNull()) {
+    if (jsonData[getEnumAsString(JSONEnum::TOKEN)].isNull()) {
         agent = new Agent("");
     } else {
-        agent = new Agent(jsonData["token"].as<String>());
+        agent = new Agent(jsonData[getEnumAsString(JSONEnum::TOKEN)].as<String>());
     }
 
     menuHandler = new MenuHandler(display, agent->getToken());

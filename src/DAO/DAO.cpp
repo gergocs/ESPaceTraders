@@ -5,16 +5,17 @@
 #include "DAO.h"
 #include "RESTClient/RESTClient.h"
 #include "menuHandler/MenuHandler.h"
+#include "utils/JSONEnum.h"
 
 std::vector<String> DAO::getAgentInfo(ArduinoJson::DynamicJsonDocument &jsonStorage, const String &token) {
-    jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/agent", token.c_str())["data"];
+    jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/agent", token.c_str())[getEnumAsString(JSONEnum::DATA)];
 
     std::vector<String> data = {};
 
-    data.push_back("id:" + jsonStorage["accountId"].as<String>());
-    data.push_back("name:" + jsonStorage["symbol"].as<String>());
-    data.push_back("hq:" + jsonStorage["headquarters"].as<String>());
-    data.push_back("credits:" + jsonStorage["credits"].as<String>());
+    data.push_back("id:" + jsonStorage[getEnumAsString(JSONEnum::ACCOUNT_ID)].as<String>());
+    data.push_back("name:" + jsonStorage[getEnumAsString(JSONEnum::SYMBOL)].as<String>());
+    data.push_back("hq:" + jsonStorage[getEnumAsString(JSONEnum::HEADQUARTERS)].as<String>());
+    data.push_back("credits:" + jsonStorage[getEnumAsString(JSONEnum::CREDITS)].as<String>());
 
     return data;
 }
@@ -27,18 +28,18 @@ std::vector<String> DAO::getFactions(ArduinoJson::DynamicJsonDocument &jsonStora
     uint32_t currentPage = 1;
     uint8_t counter = 0;
 
-    if (jsonStorage["meta"].isNull()) {
+    if (jsonStorage[getEnumAsString(JSONEnum::META)].isNull()) {
         maxPage = 1;
     } else {
-        maxPage = jsonStorage["meta"]["total"].as<int>();
-        currentPage = jsonStorage["meta"]["page"].as<int>();
+        maxPage = jsonStorage[getEnumAsString(JSONEnum::META)][getEnumAsString(JSONEnum::TOTAL)].as<int>();
+        currentPage = jsonStorage[getEnumAsString(JSONEnum::META)][getEnumAsString(JSONEnum::PAGE)].as<int>();
     }
 
-    for (JsonVariant item: jsonStorage["data"].as<ArduinoJson::JsonArray>()) {
+    for (JsonVariant item: jsonStorage[getEnumAsString(JSONEnum::DATA)].as<ArduinoJson::JsonArray>()) {
         if (counter == 0) {
-            data.push_back("[*]" + item["symbol"].as<String>());
+            data.push_back("[*]" + item[getEnumAsString(JSONEnum::SYMBOL)].as<String>());
         } else {
-            data.push_back("[ ]" + item["symbol"].as<String>());
+            data.push_back("[ ]" + item[getEnumAsString(JSONEnum::SYMBOL)].as<String>());
         }
 
         counter++;
@@ -66,21 +67,21 @@ std::vector<String> DAO::getContracts(ArduinoJson::DynamicJsonDocument &jsonStor
     uint32_t currentPage = 1;
     uint8_t counter = 0;
 
-    if (jsonStorage["meta"].isNull()) {
+    if (jsonStorage[getEnumAsString(JSONEnum::META)].isNull()) {
         maxPage = 1;
     } else {
-        maxPage = jsonStorage["meta"]["total"].as<int>();
-        currentPage = jsonStorage["meta"]["page"].as<int>();
+        maxPage = jsonStorage[getEnumAsString(JSONEnum::META)][getEnumAsString(JSONEnum::TOTAL)].as<int>();
+        currentPage = jsonStorage[getEnumAsString(JSONEnum::META)][getEnumAsString(JSONEnum::PAGE)].as<int>();
     }
 
-    for (JsonVariant item: jsonStorage["data"].as<ArduinoJson::JsonArray>()) {
+    for (JsonVariant item: jsonStorage[getEnumAsString(JSONEnum::DATA)].as<ArduinoJson::JsonArray>()) {
         if (counter == 0) {
-            data.push_back("[*]" + item["id"].as<String>().substring(0, 15) + "...");
+            data.push_back("[*]" + item[getEnumAsString(JSONEnum::ID)].as<String>().substring(0, 15) + "...");
         } else {
-            data.push_back("[ ]" + item["id"].as<String>().substring(0, 15) + "...");
+            data.push_back("[ ]" + item[getEnumAsString(JSONEnum::ID)].as<String>().substring(0, 15) + "...");
         }
 
-        idStorage.push_back(item["id"].as<std::string>());
+        idStorage.push_back(item[getEnumAsString(JSONEnum::ID)].as<std::string>());
 
         counter++;
 
@@ -104,14 +105,14 @@ std::vector<String> DAO::getFaction(DynamicJsonDocument &jsonStorage, const Stri
 
     std::vector<String> data = {};
 
-    if (jsonStorage["data"]["name"].isNull()) {
+    if (jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::NAME)].isNull()) {
         return {};
     }
 
-    data.emplace_back("name:" + jsonStorage["data"]["name"].as<String>());
-    data.emplace_back("symbol:" + jsonStorage["data"]["symbol"].as<String>());
-    data.emplace_back("hq:" + jsonStorage["data"]["headquarters"].as<String>());
-    data.emplace_back(jsonStorage["data"]["isRecruiting"].as<bool>() ? "recruiting" : "not recruiting");
+    data.emplace_back("name:" + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::NAME)].as<String>());
+    data.emplace_back("symbol:" + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::SYMBOL)].as<String>());
+    data.emplace_back("hq:" + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::HEADQUARTERS)].as<String>());
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::IS_RECRUITING)].as<bool>() ? "recruiting" : "not recruiting");
 
     return data;
 }
@@ -122,14 +123,14 @@ std::vector<String> DAO::getContract(DynamicJsonDocument &jsonStorage, const Str
 
     std::vector<String> data = {};
 
-    data.emplace_back("deadline: " + jsonStorage["data"]["terms"]["deadline"].as<String>());
-    data.emplace_back("1st payment: " + jsonStorage["data"]["terms"]["payment"]["onAccepted"].as<String>());
-    data.emplace_back("2nd payment: " + jsonStorage["data"]["terms"]["payment"]["onFulfilled"].as<String>());
-    data.emplace_back("dst: " + jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()[0]["destinationSymbol"].as<String>()); // TODO maybe change this
+    data.emplace_back("deadline: " + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TERMS)][getEnumAsString(JSONEnum::DEADLINE)].as<String>());
+    data.emplace_back("1st payment: " + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TERMS)][getEnumAsString(JSONEnum::PAYMENT)][getEnumAsString(JSONEnum::ON_ACCEPTED)].as<String>());
+    data.emplace_back("2nd payment: " + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TERMS)][getEnumAsString(JSONEnum::PAYMENT)][getEnumAsString(JSONEnum::ON_FULFILLED)].as<String>());
+    data.emplace_back("dst: " + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TERMS)][getEnumAsString(JSONEnum::DELIVER)].as<ArduinoJson::JsonArray>()[0][getEnumAsString(JSONEnum::DESTINATION_SYMBOL)].as<String>()); // TODO maybe change this
 
-    for (JsonVariant item: jsonStorage["data"]["terms"]["deliver"].as<ArduinoJson::JsonArray>()) { // TODO order by destination
-        if (uint32_t fulfilled = item["unitsFulfilled"].as<uint32_t>(), required = item["unitsRequired"].as<uint32_t>(); fulfilled < required) {
-            items += item["tradeSymbol"].as<String>() + " " + String(required - fulfilled) + "\n"; // TODO number float to right
+    for (JsonVariant item: jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TERMS)][getEnumAsString(JSONEnum::DELIVER)].as<ArduinoJson::JsonArray>()) { // TODO order by destination
+        if (uint32_t fulfilled = item[getEnumAsString(JSONEnum::UNITS_FULFILLED)].as<uint32_t>(), required = item[getEnumAsString(JSONEnum::UNITS_REQUIRED)].as<uint32_t>(); fulfilled < required) {
+            items += item[getEnumAsString(JSONEnum::TRADE_SYMBOL)].as<String>() + " " + String(required - fulfilled) + "\n"; // TODO number float to right
         }
     }
 
@@ -139,31 +140,31 @@ std::vector<String> DAO::getContract(DynamicJsonDocument &jsonStorage, const Str
 std::vector<String> DAO::getContractSubMenu(DynamicJsonDocument &jsonStorage) {
     std::vector<String> data = {};
 
-    data.emplace_back(jsonStorage["data"]["id"].as<String>().substring(0, 18) + "...");
-    data.emplace_back(jsonStorage["data"]["factionSymbol"].as<String>());
-    data.emplace_back(jsonStorage["data"]["type"].as<String>());
-    data.emplace_back(jsonStorage["data"]["accepted"].as<bool>() ? "accepted" : "not accepted");
-    data.emplace_back(jsonStorage["data"]["fulfilled"].as<bool>() ? "fulfilled" : "not fulfilled");
-    data.emplace_back("deadLine:" + jsonStorage["data"]["deadlineToAccept"].as<String>());
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::ID)].as<String>().substring(0, 18) + "...");
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::FACTION_SYMBOL)].as<String>());
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::TYPE)].as<String>());
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::ACCEPTED)].as<bool>() ? "accepted" : "not accepted");
+    data.emplace_back(jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::FULFILLED)].as<bool>() ? "fulfilled" : "not fulfilled");
+    data.emplace_back("deadLine:" + jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::DEADLINE_TO_ACCEPT)].as<String>());
 
     return data;
 }
 
 bool DAO::acceptContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string &id) {
     jsonStorage.clear();
-    jsonStorage["contractId"] = id;
+    jsonStorage[getEnumAsString(JSONEnum::CONTRACT_ID)] = id;
 
     jsonStorage = RESTClient::Post("https://api.spacetraders.io/v2/my/contracts/" + id + "/accept",
                                    token.c_str(), jsonStorage);
 
     ArduinoJson::serializeJson(jsonStorage, Serial);
 
-    return !jsonStorage["data"]["contract"]["accepted"].isNull() && jsonStorage["data"]["contract"]["accepted"].as<bool>();
+    return !jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::CONTRACT)][getEnumAsString(JSONEnum::ACCEPTED)].isNull() && jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::CONTRACT)][getEnumAsString(JSONEnum::ACCEPTED)].as<bool>();
 }
 
 bool DAO::fulfillContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string &id) {
     jsonStorage.clear();
-    jsonStorage["contractId"] = id;
+    jsonStorage[getEnumAsString(JSONEnum::CONTRACT_ID)] = id;
 
     jsonStorage = RESTClient::Post("https://api.spacetraders.io/v2/my/contracts/" + id + "/fulfill",
                                    token.c_str(), jsonStorage);
@@ -171,5 +172,5 @@ bool DAO::fulfillContract(DynamicJsonDocument &jsonStorage, const String &token,
 
     ArduinoJson::serializeJson(jsonStorage, Serial);
 
-    return !jsonStorage["data"]["contract"]["fulfilled"].isNull() && jsonStorage["data"]["contract"]["fulfilled"].as<bool>();
+    return !jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::CONTRACT)][getEnumAsString(JSONEnum::FULFILLED)].isNull() && jsonStorage[getEnumAsString(JSONEnum::DATA)][getEnumAsString(JSONEnum::CONTRACT)][getEnumAsString(JSONEnum::FULFILLED)].as<bool>();
 }

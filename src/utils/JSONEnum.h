@@ -1,0 +1,49 @@
+//
+// Created by gergocs on 2023.06.01..
+//
+
+#ifndef ESPACETRADERS_JSONENUM_H
+#define ESPACETRADERS_JSONENUM_H
+
+#include <string>
+
+enum JSONEnum {
+    ACCEPTED,
+    ACCOUNT_ID,
+    CONTRACT,
+    CONTRACT_ID,
+    CREDITS,
+    DATA,
+    DEADLINE,
+    DEADLINE_TO_ACCEPT,
+    DELIVER,
+    DESCRIPTION,
+    DESTINATION_SYMBOL,
+    EMAIL,
+    ERROR,
+    FACTION,
+    FACTION_SYMBOL,
+    FULFILLED,
+    HEADQUARTERS,
+    ID,
+    IS_RECRUITING,
+    MESSAGE,
+    META,
+    NAME,
+    ON_ACCEPTED,
+    ON_FULFILLED,
+    PAGE,
+    PAYMENT,
+    SYMBOL,
+    TERMS,
+    TOKEN,
+    TOTAL,
+    TRADE_SYMBOL,
+    TYPE,
+    UNITS_FULFILLED,
+    UNITS_REQUIRED
+};
+
+std::string getEnumAsString(JSONEnum val);
+
+#endif //ESPACETRADERS_JSONENUM_H
