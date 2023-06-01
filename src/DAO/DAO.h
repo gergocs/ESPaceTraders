@@ -16,6 +16,8 @@ public:
     static std::vector<String> getContracts(ArduinoJson::DynamicJsonDocument& jsonStorage, const String &token, uint32_t &maxPage,uint32_t pageCounter, std::vector<std::string>& idStorage);
     static std::vector<String> getContract(ArduinoJson::DynamicJsonDocument& jsonStorage, const String &token, const std::string& symbol, String& items);
     static std::vector<String> getContractSubMenu(ArduinoJson::DynamicJsonDocument& jsonStorage);
+    static bool acceptContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string& id);
+    static bool fulfillContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string& id);
 };
 
 

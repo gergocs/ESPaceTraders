@@ -51,3 +51,7 @@ bool Menu::isNeedStar() const {
 const String &Menu::getExtraInfo() const {
     return extraInfo;
 }
+
+void Menu::setExtraInfo(const String &extraInfo) {
+    Menu::extraInfo = extraInfo;
+}

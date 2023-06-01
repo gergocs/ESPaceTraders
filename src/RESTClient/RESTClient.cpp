@@ -65,7 +65,7 @@ RESTClient::Post(const std::string &path, const std::string &token, const Dynami
     http.addHeader("Accept", "application/json");
 
     if (!token.empty()) {
-        http.addHeader("Authorization", token.c_str());
+        http.addHeader("Authorization", ("Bearer " + token).c_str());
     }
 
     std::string serializedJson;

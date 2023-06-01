@@ -3,12 +3,13 @@
 //
 
 #include "MenuHandler.h"
-#include "DAO/DAO.h"
 
-__attribute__((unused)) MenuHandler::MenuHandler(int8_t sda, int8_t sdl) : display(Adafruit_SH1106(sda, sdl)),
-                                                                           position(0),
-                                                                           pageCounter(1), maxPage(1),
-                                                                           jsonStorage(1024) {
+#include <utility>
+
+__attribute__((unused)) MenuHandler::MenuHandler(int8_t sda, int8_t sdl, String token) : display(Adafruit_SH1106(sda, sdl)),
+                                                                                         position(0),
+                                                                                         pageCounter(1), maxPage(1), token(std::move(token)),
+                                                                                         jsonStorage(1024) {
     this->display.begin(SH1106_SWITCHCAPVCC, 0x3C);
     this->display.clearDisplay();
     this->display.setTextSize(1);
@@ -26,8 +27,8 @@ __attribute__((unused)) MenuHandler::MenuHandler(int8_t sda, int8_t sdl) : displ
     this->currentMenu = mainMenu;
 }
 
-MenuHandler::MenuHandler(Adafruit_SH1106 &display) : display(display), position(0), pageCounter(1),
-                                                     jsonStorage(1024), maxPage(1) {
+MenuHandler::MenuHandler(Adafruit_SH1106 &display, String token) : display(display), position(0), pageCounter(1),
+                                                                   jsonStorage(1024), maxPage(1), token(std::move(token)) {
     this->display.begin(SH1106_SWITCHCAPVCC, 0x3C);
     this->display.clearDisplay();
     this->display.setTextSize(1);
@@ -49,11 +50,89 @@ void MenuHandler::renderMenu() {
     this->display.clearDisplay();
     this->display.setCursor(0, 0);
 
-    for (uint16_t i = this->position <= 8 ? 0 : this->position; i < std::min(uint32_t(this->position + 8), this->displayData.size()); ++i) {
+    for (uint16_t i = this->position <= NUMBER_OF_LINES ? 0 : this->position; i < std::min(uint32_t(this->position + NUMBER_OF_LINES), this->displayData.size()); ++i) {
         this->display.println(this->displayData[i]);
     }
 
     this->display.display();
+}
+
+void MenuHandler::forWard() {
+    if (this->extraInfoCounter != 0) {
+        if (this->extraInfoCounter <= (this->currentMenu->getExtraInfo().length() - (7 * 21)) / 21) {
+            this->extraInfoCounter++;
+        }
+
+        this->renderSpecial(false);
+
+        return;
+    }
+
+    if (this->currentMenu->getName() == Menu::ContractSubMenu) {
+        DAO::fulfillContract(this->jsonStorage, this->token, this->jsonStorage["data"]["id"].as<std::string>());
+
+        this->prevMenu();
+        this->prevMenu();
+
+        return;
+    }
+
+    if (this->currentMenu->isNeedStar()) {
+        this->displayData[position][1] = ' ';
+    } else {
+        return;
+    }
+
+    this->position++;
+
+    if (this->position == this->displayData.size() || this->displayData[position].isEmpty()) {
+        this->position = 0;
+    }
+
+    if (this->currentMenu->isNeedStar()) {
+        this->displayData[position][1] = '*';
+    }
+
+    this->renderMenu();
+}
+
+void MenuHandler::backWard() {
+    if (this->extraInfoCounter != 0) {
+        if (this->extraInfoCounter > 1) {
+            this->extraInfoCounter--;
+        }
+
+        this->renderSpecial(false);
+
+        return;
+    }
+
+    if (this->currentMenu->isNeedStar()) {
+        this->displayData[position][1] = ' ';
+    } else {
+        return;
+    }
+
+    if (this->position == 0) {
+        uint8_t pos = this->displayData.size() - 1;
+
+        for (uint8_t i = this->displayData.size() - 1; i >= 0; --i) {
+            if (!this->displayData[i].isEmpty() && this->displayData[i].startsWith("[ ]")) {
+                pos = i;
+                break;
+            }
+        }
+
+        this->position = pos;
+    } else {
+        this->position--;
+    }
+
+    if (this->currentMenu->isNeedStar()) {
+        this->displayData[position][1] = '*';
+    }
+
+    this->renderMenu();
 }
 
 void MenuHandler::setDisplayData(std::vector<String> &data) {
@@ -78,7 +157,7 @@ void MenuHandler::prevMenu() {
     this->renderMenu();
 }
 
-void MenuHandler::select(const String &token) {
+void MenuHandler::select() {
     if (this->extraInfoCounter != 0) {
         return;
     }
@@ -87,7 +166,7 @@ void MenuHandler::select(const String &token) {
         case Menu::MainMenu: {
             switch (this->position) {
                 case 0: { // Agent data
-                    auto tmp = new Menu(DAO::getAgentInfo(this->jsonStorage, token), Menu::AgentMenu, this->currentMenu, false);
+                    auto tmp = new Menu(DAO::getAgentInfo(this->jsonStorage, this->token), Menu::AgentMenu, this->currentMenu, false);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -95,7 +174,7 @@ void MenuHandler::select(const String &token) {
                     break;
                 }
                 case 1: { // Factions
-                    auto tmp = new Menu(DAO::getFactions(this->jsonStorage, token, this->maxPage, this->pageCounter), Menu::FactionMenu, this->currentMenu);
+                    auto tmp = new Menu(DAO::getFactions(this->jsonStorage, this->token, this->maxPage, this->pageCounter), Menu::FactionMenu, this->currentMenu);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -106,7 +185,7 @@ void MenuHandler::select(const String &token) {
                     break;
                 }
                 case 3: { // contracts
-                    auto tmp = new Menu(DAO::getContracts(this->jsonStorage, token, this->maxPage, this->pageCounter, this->idStorage), Menu::ContractMenu, this->currentMenu);
+                    auto tmp = new Menu(DAO::getContracts(this->jsonStorage, this->token, this->maxPage, this->pageCounter, this->idStorage), Menu::ContractMenu, this->currentMenu);
 
                     this->currentMenu->addChild(tmp);
                     this->currentMenu = tmp;
@@ -124,7 +203,7 @@ void MenuHandler::select(const String &token) {
             break;
         }
         case Menu::FactionMenu: {
-            auto data = DAO::getFaction(this->jsonStorage, token, this->currentMenu->getMenuItems()[this->position].substring(3));
+            auto data = DAO::getFaction(this->jsonStorage, this->token, this->currentMenu->getMenuItems()[this->position].substring(3));
 
             if (data.empty()) [[unlikely]] {
                 break;
@@ -143,7 +222,7 @@ void MenuHandler::select(const String &token) {
         case Menu::ContractMenu: {
             String items;
 
-            auto tmp = new Menu(DAO::getContract(this->jsonStorage, token, this->idStorage[this->position], items), Menu::ContractSubMenu, this->currentMenu, false, items);
+            auto tmp = new Menu(DAO::getContract(this->jsonStorage, this->token, this->idStorage[this->position], items), Menu::ContractSubMenu, this->currentMenu, false, items);
 
             this->currentMenu->addChild(tmp);
             this->currentMenu = tmp;
@@ -173,6 +252,14 @@ void MenuHandler::select(const String &token) {
 }
 
 void MenuHandler::renderSpecial(bool first) {
+    if (this->currentMenu->getName() == Menu::ContractMenu) {
+        if (DAO::acceptContract(this->jsonStorage, this->token, this->idStorage[this->position])) {
+            this->currentMenu->setExtraInfo("Contract accepted");
+        } else {
+            this->currentMenu->setExtraInfo(this->jsonStorage["error"]["message"].as<String>());
+        }
+    }
+
     if (this->currentMenu->getExtraInfo().isEmpty()) {
         return;
     }
@@ -184,8 +271,7 @@ void MenuHandler::renderSpecial(bool first) {
     this->display.clearDisplay();
     this->display.setCursor(0, 0);
 
-    this->display.println(this->currentMenu->getExtraInfo().substring((this->extraInfoCounter - 1) * 21, std::min(static_cast<unsigned int>(this->extraInfoCounter * 21 * 7), this->currentMenu->getExtraInfo().length())));
+    this->display.println(this->currentMenu->getExtraInfo().substring((this->extraInfoCounter - 1) * CHAR_PER_LINE, std::min(static_cast<unsigned int>(this->extraInfoCounter * CHAR_PER_LINE * (NUMBER_OF_LINES - 1)), this->currentMenu->getExtraInfo().length())));
 
     this->display.display();
 }
-

@@ -30,8 +30,6 @@ void setup() {
     ArduinoJson::DynamicJsonDocument jsonData(1024);
     RESTClient::init("big chunky boy", "");
 
-    menuHandler = new MenuHandler(display);
-
     jsonData["faction"] = "COSMIC";
     jsonData["symbol"] = "alma6";
     jsonData["email"] = "alma6@alma6.com";
@@ -44,6 +42,8 @@ void setup() {
         agent = new Agent(jsonData["token"].as<String>());
     }
 
+    menuHandler = new MenuHandler(display, agent->getToken());
+
     menuHandler->setDisplayDataMainMenu();
 }
 
@@ -55,12 +55,12 @@ void loop() {
         menuHandler->backWard();
         delay(100);
     } else if (digitalRead(SELECT_BTN) == LOW) {
-        menuHandler->select(agent->getToken());
+        menuHandler->select();
         delay(100);
     } else if (digitalRead(BACK_BTN) == LOW) {
         menuHandler->prevMenu();
         delay(100);
     } else if (digitalRead(SPECIAL_BTN) == LOW) {
-        menuHandler->renderSpecial();
+        menuHandler->renderSpecial(true);
     }
 }

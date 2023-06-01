@@ -40,6 +40,8 @@ public:
 
     const String &getExtraInfo() const;
 
+    void setExtraInfo(const String &extraInfo);
+
     virtual ~Menu();
 
 private:

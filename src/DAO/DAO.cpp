@@ -4,6 +4,7 @@
 
 #include "DAO.h"
 #include "RESTClient/RESTClient.h"
+#include "menuHandler/MenuHandler.h"
 
 std::vector<String> DAO::getAgentInfo(ArduinoJson::DynamicJsonDocument &jsonStorage, const String &token) {
     jsonStorage = RESTClient::Get("https://api.spacetraders.io/v2/my/agent", token.c_str())["data"];
@@ -47,7 +48,7 @@ std::vector<String> DAO::getFactions(ArduinoJson::DynamicJsonDocument &jsonStora
         }
     }
 
-    for (; counter < 7; ++counter) {
+    for (; counter < NUMBER_OF_LINES - 1; ++counter) {
         data.emplace_back();
     }
 
@@ -83,12 +84,12 @@ std::vector<String> DAO::getContracts(ArduinoJson::DynamicJsonDocument &jsonStor
 
         counter++;
 
-        if (counter >= 7) {
+        if (counter >= NUMBER_OF_LINES - 1) {
             break;
         }
     }
 
-    for (; counter < 7; ++counter) {
+    for (; counter < NUMBER_OF_LINES - 1; ++counter) {
         data.emplace_back();
     }
 
@@ -146,4 +147,29 @@ std::vector<String> DAO::getContractSubMenu(DynamicJsonDocument &jsonStorage) {
     data.emplace_back("deadLine:" + jsonStorage["data"]["deadlineToAccept"].as<String>());
 
     return data;
+}
+
+bool DAO::acceptContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string &id) {
+    jsonStorage.clear();
+    jsonStorage["contractId"] = id;
+
+    jsonStorage = RESTClient::Post("https://api.spacetraders.io/v2/my/contracts/" + id + "/accept",
+                                   token.c_str(), jsonStorage);
+
+    ArduinoJson::serializeJson(jsonStorage, Serial);
+
+    return !jsonStorage["data"]["contract"]["accepted"].isNull() && jsonStorage["data"]["contract"]["accepted"].as<bool>();
+}
+
+bool DAO::fulfillContract(DynamicJsonDocument &jsonStorage, const String &token, const std::string &id) {
+    jsonStorage.clear();
+    jsonStorage["contractId"] = id;
+
+    jsonStorage = RESTClient::Post("https://api.spacetraders.io/v2/my/contracts/" + id + "/fulfill",
+                                   token.c_str(), jsonStorage);
+
+
+    ArduinoJson::serializeJson(jsonStorage, Serial);
+
+    return !jsonStorage["data"]["contract"]["fulfilled"].isNull() && jsonStorage["data"]["contract"]["fulfilled"].as<bool>();
 }
